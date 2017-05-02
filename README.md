@@ -28,7 +28,7 @@ Run it inside virtualenv in interactive mode
 ```
 or pass required credentials as inline options
 ```
-(env)$ python liscrapy/scraper.py --login_email=your_linkedin@email.com --login_pass=yourpassword --keyword=python
+(env)$ python liscrapy/scraper.py --login_email=your_linkedin@email.com --login_pass=yourpassword --keyword=python --output=searchexport.csv
 ```
 
 # Help:
