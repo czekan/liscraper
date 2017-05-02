@@ -7,28 +7,32 @@ Python 3.5+ is required.
 
 Clone repository:
 ```
-git clone https://github.com/czekan/liscraper
+$ git clone https://github.com/czekan/liscraper
 ```
 
-Create virtualenv with python 3.5+ in cloned folder:
+Create virtualenv with python 3.5+ in repository folder:
 ```
-cd liscraper && virualenv env --python=/usr/bin/python3.6 && source env/bin/activate
+$ cd liscraper && virtualenv env --python=/usr/bin/python3.6 && source env/bin/activate
 ```
 
 Install requirements:
 ```
-pip install -r requirements.txt
+(env)$ pip install -r requirements.txt
 ```
 
 # Usage:
 
-Run it inside virtualenv
+Run it inside virtualenv in interactive mode
 ```
-python liscrapy/scraper.py
+(env)$ python liscrapy/scraper.py
+```
+or pass required credentials as inline options
+```
+(env)$ python liscrapy/scraper.py --login_email=your_linkedin@email.com --login_pass=yourpassword --keyword=python
 ```
 
 # Help:
 
 ```
-python liscrapy/scraper.py --help
+(env)$ python liscrapy/scraper.py --help
 ```
