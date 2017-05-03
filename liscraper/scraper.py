@@ -1,7 +1,7 @@
 import click
 from scrapy.crawler import CrawlerProcess
 
-from spider import LinkedInSearchSpider
+from liscraper.spider import LinkedInSearchSpider
 
 
 @click.command()

@@ -1,4 +1,8 @@
+build/
+dist/
+liscraper.egg-info/
 env/
+
 *.pyc
 *.pyo
 

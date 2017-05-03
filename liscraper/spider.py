@@ -1,4 +1,5 @@
 import json
+from collections import OrderedDict
 
 from scrapy.spiders.init import InitSpider
 from scrapy.http import Request, FormRequest
@@ -17,7 +18,7 @@ class LinkedInSearchSpider(InitSpider):
     search_url = 'https://www.linkedin.com/search/results/index/?keywords={}'
 
     def __init__(self, login_email, login_pass, keyword, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(LinkedInSearchSpider, self).__init__(*args, **kwargs)
         self.login_email = login_email
         self.login_pass = login_pass
         self.start_urls = [self.search_url.format(keyword)]
@@ -57,7 +58,7 @@ class LinkedInSearchSpider(InitSpider):
                 # extract only 'included' element from parsed json
                 if 'included' in jel:
                     included.extend(jel['included'])
-            except json.decoder.JSONDecodeError:
+            except ValueError:
                 # Continue and try to parse next <code></code> elements
                 self.log("Problem with parsing json data.")
                 continue
@@ -120,22 +121,19 @@ class LinkedInSearchSpider(InitSpider):
         # expected formats: "city, province, country" or "city area, country"
         location = item['location']
         splited = location.split(', ', 3)
-        if len(splited) == 2:
+        if len(splited) >= 2:
             city = splited[0]
-            country = splited[1]
-        elif len(splited) == 3:
-            city = splited[0]
-            country = splited[2]
+            country = splited[-1]
         else:
             # no way to determine
             city = ""
             country = ""
 
-        return {
-            'first_name': item.get('firstName', 'Unknown'),
-            'last_name': item.get('lastName', 'Unknown'),
-            'position': position,
-            'company': company,
-            'city': city,
-            'country': country,
-        }
+        return OrderedDict([
+            ('first_name', item.get('firstName', 'Unknown')),
+            ('last_name', item.get('lastName', 'Unknown')),
+            ('position', position),
+            ('company', company),
+            ('city', city),
+            ('country', country),
+        ])
