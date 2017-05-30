@@ -9,7 +9,8 @@ from liscraper.spider import LinkedInSearchSpider
 @click.option('--login_pass', prompt=True, hide_input=True, help='Password used for LinkedIn auth')
 @click.option('--keyword', prompt=True, help='Search keyword')
 @click.option('--output', prompt='Output CSV file', help='CSV output filename')
-def run(login_email, login_pass, keyword, output):
+@click.option('--pages', prompt=True, help='Number of pages to scrape', default=5)
+def run(login_email, login_pass, keyword, output, pages):
     process = CrawlerProcess({
         'USER_AGENT': 'Mozilla/5.0 Gecko/20100101 Firefox/52.0',
         'FEED_FORMAT': 'CSV',
@@ -19,7 +20,8 @@ def run(login_email, login_pass, keyword, output):
         LinkedInSearchSpider,
         login_email=login_email,
         login_pass=login_pass,
-        keyword=keyword
+        keyword=keyword,
+        pages=pages
     )
     process.start()
 

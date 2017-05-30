@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="liscraper",
-    version="0.2.1",
+    version="0.2.2",
     packages=find_packages(),
     install_requires=[
         'scrapy>=1.3.3',

@@ -37,5 +37,5 @@ Run it inside virtualenv in interactive mode
 ```
 or pass required credentials as inline options
 ```
-(env)$ liscraper --login_email=your_linkedin@email.com --login_pass=yourpassword --keyword=python --output=searchexport.csv
+(env)$ liscraper --login_email=your_linkedin@email.com --login_pass=yourpassword --keyword=python --output=searchexport.csv --pages=5
 ```

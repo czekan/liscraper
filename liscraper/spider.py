@@ -5,9 +5,9 @@ from scrapy.spiders.init import InitSpider
 from scrapy.http import Request, FormRequest
 
 # LinkedIn is returning localized data so it is necessary to split it using
-# localized separator. Here are only three of possible separators in
+# localized separator. Here are only few of possible separators in
 # english, polish and german
-OCCUPATION_SEPARATORS = [' at ', ' w ', ' bei ']
+OCCUPATION_SEPARATORS = [' at ', ' in ', ' w ', ' bei ']
 
 
 class LinkedInSearchSpider(InitSpider):
@@ -15,13 +15,17 @@ class LinkedInSearchSpider(InitSpider):
     name = 'linkedin_spider'
     allowed_domains = ['linkedin.com']
     login_page = 'https://www.linkedin.com/uas/login'
-    search_url = 'https://www.linkedin.com/search/results/index/?keywords={}'
+    search_xhr_url = 'https://www.linkedin.com/voyager/api/search/cluster?count=10&guides=List()&keywords={}&origin=GLOBAL_SEARCH_HEADER&q=guided&start={}'  # noqa
 
-    def __init__(self, login_email, login_pass, keyword, *args, **kwargs):
+    jsessionid = None
+    lidc = None
+
+    def __init__(self, login_email, login_pass, keyword, pages, *args, **kwargs):
         super(LinkedInSearchSpider, self).__init__(*args, **kwargs)
         self.login_email = login_email
         self.login_pass = login_pass
-        self.start_urls = [self.search_url.format(keyword)]
+        self.keyword = keyword
+        self.pages = pages
 
     def init_request(self):
         """Before crawling starts make a request for login form."""
@@ -29,12 +33,13 @@ class LinkedInSearchSpider(InitSpider):
 
     def login(self, response):
         """Make login request with authorization credentials."""
+        self.jsessionid = self.extract_value_from_cookies(b'JSESSIONID', response)
         return FormRequest.from_response(
             response,
             formdata={
                 'session_key': self.login_email,
-                'session_password': self.login_pass
-            },
+                'session_password': self.login_pass,
+                'JSESSIONID': self.jsessionid},
             callback=self.check_login_response)
 
     def check_login_response(self, response):
@@ -42,31 +47,67 @@ class LinkedInSearchSpider(InitSpider):
         successfully logged in.
         """
         # check if response contains cookie with authentication data
-        if b'lidc' in response.headers.get('Set-Cookie'):
+        self.lidc = self.extract_value_from_cookies(b'lidc', response)
+        if self.lidc:
             self.log("Successfully logged in.")
-            return self.initialized()
+            return self.xhr_search_request(self.keyword, 0)
         else:
             self.log("There has been problem with login.")
 
-    def parse(self, response):
-        """Parse search response."""
-        included = []
-        code_elements = response.xpath('body/code/text()')
-        for element in code_elements:
-            try:
-                jel = json.loads(element.extract())
-                # extract only 'included' element from parsed json
-                if 'included' in jel:
-                    included.extend(jel['included'])
-            except ValueError:
-                # Continue and try to parse next <code></code> elements
-                self.log("Problem with parsing json data.")
-                continue
+    def extract_value_from_cookies(self, key, response):
+        """ Extract value for key from Set-Cookie header """
+        value = None
+        for cookie in response.headers.getlist('Set-Cookie'):
+            if key in cookie:
+                value = cookie.split(b'"')[1]
+        if not value:
+            self.log("Problem with extracting %s", key)
+        return value
 
+    def xhr_search_request(self, keyword, page):
+        """ Prepare Request object for search xhr url with necessary headers and cookies """
+        headers = {
+            "accept": "application/vnd.linkedin.normalized+json",
+            "accept-encoding": "gzip, deflate, sdch, br",
+            "accept-language": "en-US,en;q=0.8",
+            "authority": "www.linkedin.com",
+            "csrf-token": self.jsessionid,
+            "referer": "https://www.linkedin.com/",
+            "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)",
+            "x-li-lang": "en_US",
+            "x-requested-with": "XMLHttpRequest",
+            "x-restli-protocol-version": "2.0.0"
+        }
+        cookies = {
+            "lidc": self.lidc,
+            "JSESSIONID": self.jsessionid
+        }
+        return Request(
+            self.search_xhr_url.format(keyword, page*10),
+            headers=headers,
+            cookies=cookies,
+            callback=self.parse_xhr
+        )
+
+    def parse_xhr(self, response):
+        """Parse ajax search response."""
+        included = []
+        try:
+            jel = json.loads(response.body)
+            # extract only 'included' element from parsed json
+            if 'included' in jel:
+                included.extend(jel['included'])
+        except ValueError:
+            # Continue and try to parse next <code></code> elements
+            self.log("Problem with parsing json data.")
         results = self.extract_search_results(included)
 
         for item in results:
             yield self.profile_fields_parser(item)
+
+        # follow pagination links
+        for i in range(1, self.pages):
+            yield self.xhr_search_request(self.keyword, i)
 
     def extract_search_results(self, data):
         """ Extract search results from LinkedIn objects """
