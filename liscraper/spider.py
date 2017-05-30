@@ -93,7 +93,7 @@ class LinkedInSearchSpider(InitSpider):
         """Parse ajax search response."""
         included = []
         try:
-            jel = json.loads(response.body)
+            jel = json.loads(response.body.decode("utf-8"))
             # extract only 'included' element from parsed json
             if 'included' in jel:
                 included.extend(jel['included'])
